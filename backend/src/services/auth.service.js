@@ -67,7 +67,7 @@ const verifyToken = (token) => {
 
 // Register user
 const registerUser = async (userData) => {
-  const { email, password, role, name, company, gstin, phone } = userData;
+  const { email, password, role, name, company, category, gstin, phone } = userData;
   
   const client = await pool.connect();
   
@@ -90,10 +90,10 @@ const registerUser = async (userData) => {
     // Insert user
     const result = await client.query(
       `INSERT INTO users 
-       (email, password_hash, role, name, company, gstin, phone) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       RETURNING id, email, role, name, company, gstin, phone, created_at`,
-      [email, passwordHash, role, name, company, gstin, phone]
+       (email, password_hash, role, name, company, category, gstin, phone) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+       RETURNING id, email, role, name, company, category, gstin, phone, created_at`,
+      [email, passwordHash, role, name, company, category, gstin, phone]
     );
     
     await client.query('COMMIT');

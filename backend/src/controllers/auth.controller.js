@@ -12,6 +12,7 @@ const register = async (req, res, next) => {
       role: Joi.string().valid('CUSTOMER', 'VENDOR').required(),
       name: Joi.string().required(),
       company: Joi.string().allow(''),
+      category: Joi.string().allow(''),
       gstin: schemas.gstin.allow(''),
       phone: schemas.phone,
       address: Joi.object().optional()

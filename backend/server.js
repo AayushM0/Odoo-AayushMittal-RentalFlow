@@ -6,6 +6,7 @@ const morgan = require('morgan');
 
 // Import routes
 const authRoutes = require('./src/routes/auth.routes');
+const productRoutes = require('./src/routes/product.routes');
 
 const app = express();
 
@@ -37,13 +38,15 @@ app.get('/api', (req, res) => {
     endpoints: {
       health: '/health',
       api: '/api',
-      auth: '/api/auth'
+      auth: '/api/auth',
+      products: '/api/products'
     }
   });
 });
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
 
 // 404 handler
 app.use((req, res) => {
