@@ -217,12 +217,18 @@ function Register() {
                     id="gstin"
                     name="gstin"
                     type="text"
+                    required={formData.role === 'VENDOR'}
                     pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}"
                     value={formData.gstin}
                     onChange={handleChange}
                     className="block w-full px-3 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-black focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="GSTIN (Optional)"
+                    placeholder={formData.role === 'VENDOR' ? 'GSTIN (Required for invoicing) e.g., 22AAAAA0000A1Z5' : 'GSTIN (Optional)'}
                   />
+                  {formData.role === 'VENDOR' && (
+                    <p className="mt-1 text-xs text-gray-600">
+                      Format: 2-digit state code + 10 chars PAN + 3 chars (e.g., 22AAAAA0000A1Z5)
+                    </p>
+                  )}
                 </div>
               </>
             )}

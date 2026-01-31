@@ -10,6 +10,10 @@ const productRoutes = require('./src/routes/product.routes');
 const uploadRoutes = require('./src/routes/upload.routes');
 const reservationRoutes = require('./src/routes/reservation.routes');
 const orderRoutes = require('./src/routes/order.routes');
+const quotationRoutes = require('./src/routes/quotation.routes');
+const pricingRoutes = require('./src/routes/pricing.routes');
+const pickupRoutes = require('./src/routes/pickup.routes');
+const returnRoutes = require('./src/routes/return.routes');
 
 const app = express();
 
@@ -22,6 +26,10 @@ app.use(cors({
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(morgan('dev')); // HTTP request logging
+
+// Serve static images from 06_SRC/images folder
+const path = require('path');
+app.use('/images', express.static(path.join(__dirname, '../images')));
 
 // Health check route
 app.get('/health', (req, res) => {
@@ -45,7 +53,11 @@ app.get('/api', (req, res) => {
       products: '/api/products',
       upload: '/api/upload',
       reservations: '/api/reservations',
-      orders: '/api/orders'
+      orders: '/api/orders',
+      quotations: '/api/quotations',
+      pricing: '/api/pricing',
+      pickups: '/api/pickups',
+      returns: '/api/returns'
     }
   });
 });
@@ -56,6 +68,10 @@ app.use('/api/products', productRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/quotations', quotationRoutes);
+app.use('/api/pricing', pricingRoutes);
+app.use('/api/pickups', pickupRoutes);
+app.use('/api/returns', returnRoutes);
 
 // 404 handler
 app.use((req, res) => {

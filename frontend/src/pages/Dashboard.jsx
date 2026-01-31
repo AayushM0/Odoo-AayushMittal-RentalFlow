@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Package, ShoppingCart, FileText, TrendingUp, Clock, CheckCircle } from 'lucide-react'
 import { getVendorStats, getCustomerStats, getRecentOrders } from '../services/dashboard'
 
 function Dashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [recentOrders, setRecentOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -65,15 +67,15 @@ function Dashboard() {
   const statsConfig = stats ? getStatsConfig() : []
 
   const vendorActions = [
-    { label: 'Add New Product', color: 'bg-blue-50 hover:bg-blue-100' },
-    { label: 'View Orders', color: 'bg-green-50 hover:bg-green-100' },
-    { label: 'Generate Invoice', color: 'bg-purple-50 hover:bg-purple-100' },
+    { label: 'Add New Product', color: 'bg-blue-50 hover:bg-blue-100', onClick: () => navigate('/dashboard/create-product') },
+    { label: 'View Orders', color: 'bg-green-50 hover:bg-green-100', onClick: () => navigate('/dashboard/orders') },
+    { label: 'Generate Invoice', color: 'bg-purple-50 hover:bg-purple-100', onClick: () => navigate('/dashboard/orders') },
   ]
 
   const customerActions = [
-    { label: 'Browse Products', color: 'bg-blue-50 hover:bg-blue-100' },
-    { label: 'View My Orders', color: 'bg-green-50 hover:bg-green-100' },
-    { label: 'Track Delivery', color: 'bg-purple-50 hover:bg-purple-100' },
+    { label: 'Browse Products', color: 'bg-blue-50 hover:bg-blue-100', onClick: () => navigate('/dashboard/products') },
+    { label: 'View My Orders', color: 'bg-green-50 hover:bg-green-100', onClick: () => navigate('/dashboard/orders') },
+    { label: 'Track Delivery', color: 'bg-purple-50 hover:bg-purple-100', onClick: () => navigate('/dashboard/orders') },
   ]
 
   const quickActions = user?.role === 'VENDOR' ? vendorActions : customerActions
@@ -168,6 +170,7 @@ function Dashboard() {
             {quickActions.map((action) => (
               <button 
                 key={action.label}
+                onClick={action.onClick}
                 className={`w-full text-left px-4 py-2 ${action.color} rounded-lg transition`}
               >
                 {action.label}

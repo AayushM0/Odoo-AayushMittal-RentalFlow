@@ -4,13 +4,13 @@
 -- Sample Vendor User
 INSERT INTO users (email, password_hash, role, name, phone, company, category, is_active)
 VALUES 
-  ('vendor@example.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIeWEgZb7e', 'VENDOR', 'Test Vendor', '9876543210', 'Test Electronics', 'Electronics', true)
+  ('vendor@example.com', '$2b$12$GcWgB9P7j5iQVGXNOcKu4e2I5eud0qp2ygvjK1Jdn9HIOi0RMF2Cq', 'VENDOR', 'Test Vendor', '9876543210', 'Test Electronics', 'Electronics', true)
 ON CONFLICT (email) DO NOTHING;
 
 -- Sample Customer User  
 INSERT INTO users (email, password_hash, role, name, phone, is_active)
 VALUES 
-  ('customer@example.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIeWEgZb7e', 'CUSTOMER', 'Test Customer', '9123456789', true)
+  ('customer@example.com', '$2b$12$GcWgB9P7j5iQVGXNOcKu4e2I5eud0qp2ygvjK1Jdn9HIOi0RMF2Cq', 'CUSTOMER', 'Test Customer', '9123456789', true)
 ON CONFLICT (email) DO NOTHING;
 
 -- Note: password_hash is for password "Test@123"

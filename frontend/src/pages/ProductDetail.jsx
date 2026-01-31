@@ -211,8 +211,8 @@ function ProductDetail() {
             {user?.role === 'VENDOR' && product.vendor_id === user.id && (
               <>
                 <button
-                  onClick={() => navigate(`/products/edit/${product.id}`)}
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  onClick={() => navigate(`/dashboard/products/${product.id}/edit`)}
+                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
                 >
                   Edit Product
                 </button>

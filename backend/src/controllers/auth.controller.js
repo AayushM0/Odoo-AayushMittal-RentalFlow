@@ -101,4 +101,26 @@ const logout = (req, res) => {
   });
 };
 
-module.exports = { register, login, refresh, logout };
+const me = async (req, res, next) => {
+  try {
+    const pool = require('../config/database');
+    
+    const result = await pool.query(
+      'SELECT id, email, role, name, phone, company, category, gstin, profile_image, created_at FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    
+    if (result.rows.length === 0) {
+      throw new ApiError('User not found', 404);
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { register, login, refresh, logout, me };

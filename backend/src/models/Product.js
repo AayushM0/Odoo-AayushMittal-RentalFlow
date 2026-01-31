@@ -33,6 +33,8 @@ class Product {
       SELECT 
         p.*,
         COALESCE(json_agg(v.*) FILTER (WHERE v.id IS NOT NULL), '[]') as variants,
+        COALESCE(SUM(v.stock_quantity), 0) as total_stock,
+        COUNT(v.id) FILTER (WHERE v.id IS NOT NULL) as variant_count,
         u.name as vendor_name
       FROM products p
       LEFT JOIN variants v ON p.id = v.product_id
@@ -128,11 +130,43 @@ class Product {
     return result.rows[0];
   }
 
-  static async findAll({ page = 1, limit = 10, search, category, brand, minPrice, maxPrice }) {
+  static async deleteVariant(client, variantId) {
+    const query = 'DELETE FROM variants WHERE id = $1 RETURNING *;';
+    const result = await (client || db).query(query, [variantId]);
+    
+    if (result.rows.length === 0) {
+      throw new AppError('Variant not found', 404);
+    }
+    return result.rows[0];
+  }
+
+  static async findVariantById(variantId) {
+    const query = 'SELECT * FROM variants WHERE id = $1;';
+    const result = await db.query(query, [variantId]);
+    return result.rows[0] || null;
+  }
+
+  static async findAll({ page = 1, limit = 10, search, category, brand, minPrice, maxPrice, vendor_id, is_published }) {
     const offset = (page - 1) * limit;
     const params = [];
-    let whereClauses = ['is_published = true'];
+    let whereClauses = [];
     let paramIndex = 1;
+    
+    // Handle is_published filter (default to true if not specified)
+    if (is_published !== undefined) {
+      whereClauses.push(`p.is_published = $${paramIndex}`);
+      params.push(is_published);
+      paramIndex++;
+    } else {
+      whereClauses.push('p.is_published = true');
+    }
+    
+    // Filter by vendor_id if provided (for vendor's own products)
+    if (vendor_id) {
+      whereClauses.push(`p.vendor_id = $${paramIndex}`);
+      params.push(vendor_id);
+      paramIndex++;
+    }
 
     if (search) {
       whereClauses.push(`(p.name ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex})`);
@@ -175,7 +209,11 @@ class Product {
     }
 
     const dataQuery = `
-      SELECT p.*, MIN(v.price_daily) as min_daily_price
+      SELECT 
+        p.*, 
+        MIN(v.price_daily) as min_daily_price,
+        COALESCE(SUM(v.stock_quantity), 0) as total_stock,
+        COUNT(v.id) as variant_count
       FROM products p
       LEFT JOIN variants v ON p.id = v.product_id
       ${whereSql}

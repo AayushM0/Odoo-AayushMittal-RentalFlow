@@ -14,6 +14,8 @@ import ProductDetail from './pages/ProductDetail'
 import Orders from './pages/Orders'
 import Reservations from './pages/Reservations'
 import MyProducts from './pages/MyProducts'
+import CreateProduct from './pages/CreateProduct'
+import EditProduct from './pages/EditProduct'
 import NotFound from './pages/NotFound'
 
 function App() {
@@ -50,6 +52,8 @@ function App() {
             <Route path="/dashboard/orders" element={<Orders />} />
             <Route path="/dashboard/reservations" element={<Reservations />} />
             <Route path="/dashboard/my-products" element={<MyProducts />} />
+            <Route path="/dashboard/create-product" element={<CreateProduct />} />
+            <Route path="/dashboard/products/:id/edit" element={<EditProduct />} />
           </Route>
 
           {/* 404 */}

@@ -135,7 +135,7 @@ function Products() {
                     ₹{product.min_daily_price || 'N/A'}/day
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {product.variants?.[0]?.stock_quantity || 'N/A'}
+                    {product.total_stock !== undefined ? product.total_stock : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button 

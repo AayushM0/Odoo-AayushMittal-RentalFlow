@@ -24,7 +24,7 @@ function ProductCard({ product, onView }) {
             ₹{product.min_daily_price || 'N/A'}/day
           </span>
           <span className="text-sm text-gray-500">
-            Stock: {product.variants?.[0]?.stock_quantity || 0}
+            Stock: {product.total_stock !== undefined ? product.total_stock : 'N/A'}
           </span>
         </div>
         <button

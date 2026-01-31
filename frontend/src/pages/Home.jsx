@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import ProductCard from '../components/products/ProductCard'
@@ -9,6 +9,11 @@ function Home() {
   const [featuredProducts, setFeaturedProducts] = useState([])
   const [stats, setStats] = useState({ totalProducts: 0, categories: 0 })
   const [loading, setLoading] = useState(true)
+  
+  // Redirect authenticated users to dashboard
+  if (isAuthenticated && user) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   useEffect(() => {
     const fetchHomeData = async () => {

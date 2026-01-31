@@ -12,9 +12,25 @@ const registerSchema = Joi.object({
   password,
   role: Joi.string().valid('CUSTOMER', 'VENDOR').required(),
   name: Joi.string().required(),
-  company: Joi.string().allow(''),
-  category: Joi.string().allow(''),
-  gstin: gstin.allow(''),
+  company: Joi.string().when('role', {
+    is: 'VENDOR',
+    then: Joi.required(),
+    otherwise: Joi.allow('')
+  }),
+  category: Joi.string().when('role', {
+    is: 'VENDOR',
+    then: Joi.required(),
+    otherwise: Joi.allow('')
+  }),
+  gstin: Joi.string().pattern(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/).when('role', {
+    is: 'VENDOR',
+    then: Joi.required().messages({
+      'any.required': 'GSTIN is required for vendors (needed for invoicing)',
+      'string.pattern.base': 'GSTIN must be in valid format (e.g., 22AAAAA0000A1Z5)',
+      'string.empty': 'GSTIN cannot be empty for vendors'
+    }),
+    otherwise: Joi.allow('')
+  }),
   phone,
   address: Joi.object().optional(),
   profile_image: Joi.string().uri().allow('', null)

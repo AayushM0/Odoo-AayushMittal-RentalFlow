@@ -1,6 +1,9 @@
 import { Menu, Bell, User } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 
 const DashboardHeader = () => {
+  const { user } = useAuth()
+  
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="flex items-center justify-between px-6 py-4">
@@ -24,7 +27,7 @@ const DashboardHeader = () => {
           
           <button className="flex items-center gap-2 hover:bg-gray-100 px-3 py-2 rounded-lg">
             <User className="w-6 h-6 text-gray-600" />
-            <span className="text-sm font-medium">John Doe</span>
+            <span className="text-sm font-medium">{user?.name || 'User'}</span>
           </button>
         </div>
       </div>

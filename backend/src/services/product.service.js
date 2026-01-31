@@ -4,10 +4,6 @@ const { ApiError } = require('../utils/errors');
 
 class ProductService {
   static async createProduct(vendorId, productData, variantsData) {
-    if (!variantsData || variantsData.length === 0) {
-      throw new ApiError('Product must have at least one variant', 400);
-    }
-
     const client = await db.connect();
     try {
       await client.query('BEGIN');
@@ -18,9 +14,11 @@ class ProductService {
       });
 
       const variants = [];
-      for (const variantData of variantsData) {
-        const variant = await Product.createVariant(client, product.id, variantData);
-        variants.push(variant);
+      if (variantsData && variantsData.length > 0) {
+        for (const variantData of variantsData) {
+          const variant = await Product.createVariant(client, product.id, variantData);
+          variants.push(variant);
+        }
       }
 
       await client.query('COMMIT');
@@ -104,13 +102,30 @@ class ProductService {
         throw new ApiError('Not authorized to update this product', 403);
       }
 
-      const updated = await Product.update(client, id, updates);
+      const { variants, ...productUpdates } = updates;
+
+      const updated = await Product.update(client, id, productUpdates);
+
+      let updatedVariants = [];
+      if (variants && variants.length > 0) {
+        for (const variantData of variants) {
+          if (variantData.id) {
+            const updatedVariant = await Product.updateVariant(client, variantData.id, variantData);
+            updatedVariants.push(updatedVariant);
+          } else {
+            const newVariant = await Product.createVariant(client, id, variantData);
+            updatedVariants.push(newVariant);
+          }
+        }
+      }
 
       await client.query('COMMIT');
 
+      const finalProduct = await Product.findById(id);
+
       return {
         success: true,
-        data: updated
+        data: finalProduct
       };
     } catch (error) {
       await client.query('ROLLBACK');
@@ -148,6 +163,114 @@ class ProductService {
       await client.query('ROLLBACK');
       if (error.statusCode) throw error;
       throw new ApiError(error.message || 'Delete failed', 500);
+    } finally {
+      client.release();
+    }
+  }
+
+  static async createVariant(productId, vendorId, userRole, variantData) {
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+
+      const product = await Product.findById(productId);
+
+      if (!product) {
+        throw new ApiError('Product not found', 404);
+      }
+
+      if (userRole !== 'ADMIN' && product.vendor_id !== vendorId) {
+        throw new ApiError('Not authorized to modify this product', 403);
+      }
+
+      const variant = await Product.createVariant(client, productId, variantData);
+
+      await client.query('COMMIT');
+
+      return {
+        success: true,
+        message: 'Variant created successfully',
+        data: variant
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if (error.statusCode) throw error;
+      throw new ApiError(error.message || 'Variant creation failed', 500);
+    } finally {
+      client.release();
+    }
+  }
+
+  static async updateVariant(productId, variantId, vendorId, userRole, updates) {
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+
+      const product = await Product.findById(productId);
+
+      if (!product) {
+        throw new ApiError('Product not found', 404);
+      }
+
+      if (userRole !== 'ADMIN' && product.vendor_id !== vendorId) {
+        throw new ApiError('Not authorized to modify this product', 403);
+      }
+
+      const variant = await Product.findVariantById(variantId);
+      if (!variant || variant.product_id !== parseInt(productId)) {
+        throw new ApiError('Variant not found', 404);
+      }
+
+      const updated = await Product.updateVariant(client, variantId, updates);
+
+      await client.query('COMMIT');
+
+      return {
+        success: true,
+        message: 'Variant updated successfully',
+        data: updated
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if (error.statusCode) throw error;
+      throw new ApiError(error.message || 'Variant update failed', 500);
+    } finally {
+      client.release();
+    }
+  }
+
+  static async deleteVariant(productId, variantId, vendorId, userRole) {
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+
+      const product = await Product.findById(productId);
+
+      if (!product) {
+        throw new ApiError('Product not found', 404);
+      }
+
+      if (userRole !== 'ADMIN' && product.vendor_id !== vendorId) {
+        throw new ApiError('Not authorized to modify this product', 403);
+      }
+
+      const variant = await Product.findVariantById(variantId);
+      if (!variant || variant.product_id !== parseInt(productId)) {
+        throw new ApiError('Variant not found', 404);
+      }
+
+      await Product.deleteVariant(client, variantId);
+
+      await client.query('COMMIT');
+
+      return {
+        success: true,
+        message: 'Variant deleted successfully'
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if (error.statusCode) throw error;
+      throw new ApiError(error.message || 'Variant deletion failed', 500);
     } finally {
       client.release();
     }

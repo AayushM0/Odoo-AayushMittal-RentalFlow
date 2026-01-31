@@ -2,7 +2,7 @@ const ProductService = require('../services/product.service');
 const { ApiError } = require('../utils/errors');
 const { product: productSchemas } = require('../database/schemas');
 
-const { createProductSchema, updateProductSchema } = productSchemas;
+const { createProductSchema, updateProductSchema, variantSchema, updateVariantSchema } = productSchemas;
 
 const createProduct = async (req, res, next) => {
   try {
@@ -107,10 +107,75 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
+const createVariant = async (req, res, next) => {
+  try {
+    const { productId } = req.params;
+
+    const { error, value } = variantSchema.validate(req.body);
+    if (error) {
+      throw new ApiError(error.details[0].message, 400);
+    }
+
+    const result = await ProductService.createVariant(
+      productId,
+      req.user.id,
+      req.user.role,
+      value
+    );
+
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateVariant = async (req, res, next) => {
+  try {
+    const { productId, variantId } = req.params;
+
+    const { error, value } = updateVariantSchema.validate(req.body);
+    if (error) {
+      throw new ApiError(error.details[0].message, 400);
+    }
+
+    const result = await ProductService.updateVariant(
+      productId,
+      variantId,
+      req.user.id,
+      req.user.role,
+      value
+    );
+
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteVariant = async (req, res, next) => {
+  try {
+    const { productId, variantId } = req.params;
+
+    const result = await ProductService.deleteVariant(
+      productId,
+      variantId,
+      req.user.id,
+      req.user.role
+    );
+
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
   getProductById,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  createVariant,
+  updateVariant,
+  deleteVariant
 };

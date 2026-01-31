@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
         try {
           // Verify token and get user info
           const response = await api.get('/auth/me')
-          setUser(response.data)
+          setUser(response.data.data)
           setIsAuthenticated(true)
         } catch (error) {
           // Token invalid or expired

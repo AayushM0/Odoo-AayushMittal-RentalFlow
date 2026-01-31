@@ -46,14 +46,22 @@ function MyProducts() {
     }
   }
 
-  const getTotalStock = (variants) => {
-    if (!variants || variants.length === 0) return 0
-    return variants.reduce((sum, v) => sum + (v.stock_quantity || 0), 0)
+  const getTotalStock = (product) => {
+    // Use total_stock from API if available, otherwise calculate from variants
+    if (product.total_stock !== undefined) {
+      return parseInt(product.total_stock) || 0
+    }
+    if (!product.variants || product.variants.length === 0) return 0
+    return product.variants.reduce((sum, v) => sum + (v.stock_quantity || 0), 0)
   }
 
-  const getLowestStock = (variants) => {
-    if (!variants || variants.length === 0) return 0
-    return Math.min(...variants.map(v => v.stock_quantity || 0))
+  const getLowestStock = (product) => {
+    // Use total_stock as approximation if variants not available
+    if (product.total_stock !== undefined && (!product.variants || product.variants.length === 0)) {
+      return parseInt(product.total_stock) || 0
+    }
+    if (!product.variants || product.variants.length === 0) return 0
+    return Math.min(...product.variants.map(v => v.stock_quantity || 0))
   }
 
   const formatCurrency = (amount) => {
@@ -82,7 +90,7 @@ function MyProducts() {
           </p>
         </div>
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/dashboard/create-product')}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
         >
           Add New Product
@@ -99,7 +107,7 @@ function MyProducts() {
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <p className="text-gray-600 text-lg mb-4">You haven't created any products yet</p>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/dashboard/create-product')}
             className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
             Create Your First Product
@@ -108,8 +116,8 @@ function MyProducts() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => {
-            const totalStock = getTotalStock(product.variants)
-            const lowestStock = getLowestStock(product.variants)
+            const totalStock = getTotalStock(product)
+            const lowestStock = getLowestStock(product)
             const isLowStock = lowestStock < 2 && lowestStock > 0
             const isOutOfStock = totalStock === 0
 
@@ -151,18 +159,17 @@ function MyProducts() {
                         {totalStock} units
                       </span>
                     </div>
-                    {product.variants && product.variants.length > 0 && (
+                    {product.min_daily_price && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Price Range:</span>
+                        <span className="text-gray-600">Starting Price:</span>
                         <span className="font-medium">
-                          {formatCurrency(Math.min(...product.variants.map(v => v.price_per_day)))} - 
-                          {formatCurrency(Math.max(...product.variants.map(v => v.price_per_day)))}
+                          {formatCurrency(product.min_daily_price)}/day
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Variants:</span>
-                      <span className="font-medium">{product.variants?.length || 0}</span>
+                      <span className="font-medium">{product.variant_count || product.variants?.length || 0}</span>
                     </div>
                   </div>
 
@@ -172,6 +179,12 @@ function MyProducts() {
                       className="flex-1 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition font-medium"
                     >
                       View
+                    </button>
+                    <button
+                      onClick={() => navigate(`/dashboard/products/${product.id}/edit`)}
+                      className="flex-1 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition font-medium"
+                    >
+                      Edit
                     </button>
                     <button
                       onClick={() => handleDeleteProduct(product.id)}
