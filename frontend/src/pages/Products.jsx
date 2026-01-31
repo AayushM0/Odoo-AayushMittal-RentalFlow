@@ -9,6 +9,7 @@ function Products() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [searchInput, setSearchInput] = useState('') // Local state for input
   const [filters, setFilters] = useState({
     search: '',
     category: '',
@@ -49,6 +50,15 @@ function Products() {
     }
   }
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchInput }))
+    }, 500) // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
   useEffect(() => {
     fetchProducts()
   }, [pagination.page, filters])
@@ -84,8 +94,8 @@ function Products() {
         <input
           type="text"
           placeholder="Search products..."
-          value={filters.search}
-          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
@@ -101,7 +111,10 @@ function Products() {
           <option value="Vehicles">Vehicles</option>
         </select>
         <button
-          onClick={() => setFilters({ search: '', category: '', brand: '' })}
+          onClick={() => {
+            setSearchInput('')
+            setFilters({ search: '', category: '', brand: '' })
+          }}
           className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
         >
           Clear Filters

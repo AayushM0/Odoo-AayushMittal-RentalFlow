@@ -2,13 +2,10 @@ const express = require('express');
 const router = express.Router();
 const pickupController = require('../controllers/pickup.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const { validate } = require('../middleware/validation.middleware');
-const { recordPickupSchema } = require('../database/schemas');
 
 router.post(
   '/',
   authenticate,
-  validate(recordPickupSchema),
   pickupController.recordPickup
 );
 

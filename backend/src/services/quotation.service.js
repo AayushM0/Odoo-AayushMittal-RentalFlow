@@ -26,7 +26,8 @@ class QuotationService {
   }
 
   static async createQuotation(customerId, data) {
-    const { items, vendorId, notes, vendorState, customerState } = data;
+    const { items, vendor_id, notes, vendorState, customerState } = data;
+    const vendorId = vendor_id; // Support both snake_case and camelCase
 
     if (!items || items.length === 0) {
       throw new ApiError('Quotation must have at least one item', 400);
@@ -36,27 +37,66 @@ class QuotationService {
       // Enrich items with variant data
       const enrichedItems = [];
       
+      console.log('📦 Processing items for quotation:', JSON.stringify(items, null, 2));
+      
       for (const item of items) {
-        // Fetch product to get variant details
-        const product = await Product.findById(item.product_id);
-        if (!product) {
-          throw new ApiError(`Product ${item.product_id} not found`, 404);
+        console.log('🔍 Processing item:', JSON.stringify(item, null, 2));
+        
+        // If product_id is not provided, fetch it from variant
+        let productId = item.product_id;
+        
+        if (!productId && item.variant_id) {
+          // Fetch variant to get product_id
+          console.log('🔎 Fetching product_id for variant:', item.variant_id);
+          const variantResult = await db.query(
+            'SELECT product_id FROM variants WHERE id = $1',
+            [item.variant_id]
+          );
+          
+          if (variantResult.rows.length === 0) {
+            throw new ApiError(`Variant ${item.variant_id} not found`, 404);
+          }
+          
+          productId = variantResult.rows[0].product_id;
+          console.log('✅ Found product_id:', productId);
         }
+        
+        if (!productId) {
+          throw new ApiError('Either product_id or variant_id is required for each item', 400);
+        }
+        
+        // Fetch product to get variant details
+        console.log('📦 Fetching product:', productId);
+        const product = await Product.findById(productId);
+        if (!product) {
+          throw new ApiError(`Product ${productId} not found`, 404);
+        }
+        
+        console.log('📦 Product fetched:', product.name, 'with', product.variants?.length, 'variants');
         
         // Find variant
         // Note: product.variants is already a JavaScript array from json_agg(), not a JSON string
         let variant;
         if (item.variant_id) {
+          console.log('🔍 Looking for variant_id:', item.variant_id, 'in variants');
           variant = product.variants.find(v => v.id === item.variant_id);
           if (!variant) {
+            console.error('❌ Variant not found in product.variants:', product.variants.map(v => v.id));
             throw new ApiError(`Variant ${item.variant_id} not found`, 404);
           }
+          console.log('✅ Found variant:', variant.sku, 'with pricing:', {
+            hourly: variant.price_hourly,
+            daily: variant.price_daily,
+            weekly: variant.price_weekly,
+            monthly: variant.price_monthly
+          });
         } else {
           // Use first variant if no variant_id specified
           if (!product.variants || product.variants.length === 0) {
-            throw new ApiError(`Product ${item.product_id} has no variants`, 400);
+            throw new ApiError(`Product ${productId} has no variants`, 400);
           }
           variant = product.variants[0];
+          console.log('📌 Using first variant:', variant.sku);
         }
         
         enrichedItems.push({
@@ -67,6 +107,8 @@ class QuotationService {
           quantity: item.quantity
         });
       }
+      
+      console.log('✅ Enriched items:', enrichedItems.length);
       
       // Use pricing service to generate quotation with proper calculation
       const quotationData = await pricingService.generateQuotation(

@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const authService = require('../services/auth.service');
+const emailService = require('../services/email.service');
+const auditService = require('../services/audit.service');
 const { ApiError } = require('../utils/errors');
 const { auth: authSchemas } = require('../database/schemas');
 
@@ -13,6 +15,15 @@ const register = async (req, res, next) => {
     const result = await authService.registerUser(value);
     
     if (!result.success) {
+      // Log failed registration
+      await auditService.logAudit({
+        userEmail: value.email,
+        action: auditService.AuditActions.CREATE_USER,
+        description: `User registration failed: ${result.error}`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        status: 'FAILED'
+      });
       throw new ApiError(result.error, 400);
     }
 
@@ -20,6 +31,23 @@ const register = async (req, res, next) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    emailService.sendWelcomeEmail(result.data.user).catch(err => {
+      console.error('Failed to send welcome email:', err);
+    });
+
+    // Log successful registration
+    await auditService.logAudit({
+      userId: result.data.user.id,
+      userEmail: result.data.user.email,
+      action: auditService.AuditActions.CREATE_USER,
+      entityType: 'USER',
+      entityId: result.data.user.id,
+      description: `User registered successfully as ${result.data.user.role}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      status: 'SUCCESS'
     });
 
     res.status(201).json({
@@ -42,6 +70,16 @@ const login = async (req, res, next) => {
     const result = await authService.loginUser(value.email, value.password);
 
     if (!result.success) {
+      // Log failed login
+      await auditService.logAudit({
+        userEmail: value.email,
+        action: auditService.AuditActions.LOGIN_FAILED,
+        description: `Login failed: ${result.error}`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        status: 'FAILED'
+      });
+      
       const statusCode = result.error === 'Account deactivated' ? 403 : 401;
       throw new ApiError(result.error, statusCode);
     }
@@ -50,6 +88,17 @@ const login = async (req, res, next) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    // Log successful login
+    await auditService.logAudit({
+      userId: result.data.user.id,
+      userEmail: result.data.user.email,
+      action: auditService.AuditActions.USER_LOGIN,
+      description: `User logged in successfully`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      status: 'SUCCESS'
     });
 
     res.status(200).json({
@@ -93,8 +142,22 @@ const refresh = async (req, res, next) => {
   }
 };
 
-const logout = (req, res) => {
+const logout = async (req, res) => {
   res.clearCookie('refreshToken');
+  
+  // Log logout
+  if (req.user) {
+    await auditService.logAudit({
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: auditService.AuditActions.USER_LOGOUT,
+      description: 'User logged out',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      status: 'SUCCESS'
+    });
+  }
+  
   res.status(200).json({
     success: true,
     message: 'Logged out successfully'

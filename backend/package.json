@@ -11,7 +11,22 @@
     "db:seed": "node scripts/db-seed.js",
     "db:setup": "node scripts/db-setup.js",
     "db:reset": "node scripts/db-setup.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:verbose": "jest --verbose",
+    "test:unit": "jest --testPathPattern=tests/unit",
+    "test:integration": "jest --testPathPattern=tests/integration --runInBand",
+    "test:all": "jest --coverage --runInBand"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coveragePathIgnorePatterns": ["/node_modules/"],
+    "testMatch": ["**/tests/**/*.test.js"],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/jobs/**",
+      "!src/config/**"
+    ]
   },
   "keywords": [
     "rental",
@@ -21,7 +36,10 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.11",
+    "supertest": "^7.2.2"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -36,7 +54,11 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.13",
+    "pdfkit": "^0.17.2",
     "pg": "^8.18.0",
+    "razorpay": "^2.9.6",
     "streamifier": "^0.1.1",
     "winston": "^3.19.0"
   }

@@ -15,6 +15,10 @@ router.get('/', orderController.getOrders);
 
 router.get('/:id', orderController.getOrderById);
 
+router.post('/:id/confirm', orderController.confirmOrder);
+
+router.post('/:id/mark-payment-complete', authorize('CUSTOMER'), orderController.markPaymentComplete);
+
 router.delete('/:id', orderController.cancelOrder);
 
 module.exports = router;

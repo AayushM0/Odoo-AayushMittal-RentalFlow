@@ -12,6 +12,24 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Redirect to role-specific dashboard
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'ADMIN') {
+        navigate('/admin/dashboard', { replace: true })
+        return
+      }
+      if (user.role === 'VENDOR') {
+        navigate('/vendor/dashboard', { replace: true })
+        return
+      }
+      if (user.role === 'CUSTOMER') {
+        navigate('/customer/dashboard', { replace: true })
+        return
+      }
+    }
+  }, [user, navigate])
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {

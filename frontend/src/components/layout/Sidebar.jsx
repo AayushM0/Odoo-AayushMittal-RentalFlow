@@ -25,14 +25,23 @@ const Sidebar = () => {
     { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
   ]
   
-  const menuItems = user?.role === 'VENDOR' ? vendorMenuItems : customerMenuItems
+  const adminMenuItems = [
+    { icon: Home, label: 'Dashboard', path: '/admin/dashboard' },
+    { icon: Users, label: 'User Management', path: '/admin/users' },
+    { icon: Package, label: 'Products', path: '/products' },
+    { icon: ShoppingCart, label: 'Orders', path: '/orders' },
+    { icon: FileText, label: 'Analytics', path: '/admin/analytics' },
+    { icon: Settings, label: 'Settings', path: '/admin/settings' },
+  ]
+  
+  const menuItems = user?.role === 'ADMIN' ? adminMenuItems : user?.role === 'VENDOR' ? vendorMenuItems : customerMenuItems
   
   return (
     <aside className="w-64 bg-gray-900 text-white flex flex-col">
       <div className="p-6 border-b border-gray-800">
         <h1 className="text-2xl font-bold">Rental ERP</h1>
         <p className="text-sm text-gray-400 mt-1">
-          {user?.role === 'VENDOR' ? 'Vendor Portal' : 'Customer Portal'}
+          {user?.role === 'ADMIN' ? 'Admin Portal' : user?.role === 'VENDOR' ? 'Vendor Portal' : 'Customer Portal'}
         </p>
       </div>
       

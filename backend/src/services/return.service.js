@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { ApiError } = require('../utils/errorHandler');
+const { ApiError } = require('../utils/errors');
 const Order = require('../models/Order');
 const Reservation = require('../models/Reservation');
 

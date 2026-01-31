@@ -27,7 +27,7 @@ class OrderService {
   }
 
   static async createOrder(customerId, orderData) {
-    const { items } = orderData;
+    const { items, vendor_id, billing_address, shipping_address, customer_notes } = orderData;
 
     if (!items || items.length === 0) {
       throw new ApiError('Order must have at least one item', 400);
@@ -47,11 +47,11 @@ class OrderService {
            FROM variants v 
            JOIN products p ON v.product_id = p.id 
            WHERE v.id = $1`,
-          [item.variantId]
+          [item.variant_id]
         );
 
         if (variantQuery.rows.length === 0) {
-          throw new ApiError(`Variant ${item.variantId} not found`, 404);
+          throw new ApiError(`Variant ${item.variant_id} not found`, 404);
         }
 
         const variant = variantQuery.rows[0];
@@ -62,8 +62,8 @@ class OrderService {
           throw new ApiError('All items must be from the same vendor', 400);
         }
 
-        const startDate = new Date(item.startDate);
-        const endDate = new Date(item.endDate);
+        const startDate = new Date(item.start_date);
+        const endDate = new Date(item.end_date);
         const durationDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
 
         const pricePerDay = variant.price_daily || variant.price_per_day || 0;
@@ -79,24 +79,27 @@ class OrderService {
 
       const { total } = this.calculateTotals(enrichedItems);
 
-      const startDate = new Date(Math.min(...items.map(i => new Date(i.startDate))));
-      const endDate = new Date(Math.max(...items.map(i => new Date(i.endDate))));
+      const startDate = new Date(Math.min(...items.map(i => new Date(i.start_date))));
+      const endDate = new Date(Math.max(...items.map(i => new Date(i.end_date))));
 
       const order = await Order.create(client, {
         customer_id: customerId,
-        vendor_id: vendorId,
+        vendor_id: vendor_id || vendorId,
         order_number: orderNumber,
         total_amount: total,
         start_date: startDate,
         end_date: endDate,
-        status: 'PENDING'
+        status: 'PENDING',
+        billing_address: billing_address || null,
+        shipping_address: shipping_address || null,
+        customer_notes: customer_notes || null
       });
 
       const reservationItems = items.map(item => ({
-        variantId: item.variantId,
+        variantId: item.variant_id,
         quantity: item.quantity,
-        startDate: item.startDate,
-        endDate: item.endDate
+        startDate: item.start_date,
+        endDate: item.end_date
       }));
 
       const reservationResult = await reservationService.createReservationWithClient(
@@ -209,6 +212,100 @@ class OrderService {
       throw new ApiError(error.message || 'Cancellation failed', 500);
     } finally {
       client.release();
+    }
+  }
+
+  static async confirmOrder(orderId, userId, userRole) {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const order = await Order.findById(orderId);
+      
+      if (!order) {
+        throw new ApiError('Order not found', 404);
+      }
+      
+      if (userRole !== 'ADMIN' && order.vendor_id !== userId) {
+        throw new ApiError('Only vendor or admin can confirm orders', 403);
+      }
+      
+      if (order.status !== 'PENDING') {
+        throw new ApiError(`Cannot confirm order with status: ${order.status}`, 400);
+      }
+      
+      await Order.updateStatus(client, orderId, 'CONFIRMED');
+      
+      const invoiceService = require('./invoice.service');
+      const invoice = await invoiceService.generateInvoice(orderId, client);
+      
+      await client.query('COMMIT');
+      
+      setTimeout(async () => {
+        try {
+          await invoiceService.generatePDF(invoice.id);
+          await invoiceService.sendInvoiceEmail(invoice.id);
+        } catch (err) {
+          console.error('Failed to send invoice email:', err);
+        }
+      }, 1000);
+      
+      return {
+        success: true,
+        data: {
+          order: await Order.findById(orderId),
+          invoice
+        }
+      };
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      
+      if (error.statusCode) throw error;
+      throw new ApiError(error.message || 'Order confirmation failed', 500);
+    } finally {
+      client.release();
+    }
+  }
+
+  static async markPaymentComplete(orderId, userId, paymentData = {}) {
+    try {
+      const order = await Order.findById(orderId);
+      
+      if (!order) {
+        throw new ApiError('Order not found', 404);
+      }
+      
+      if (order.customer_id !== userId) {
+        throw new ApiError('Not authorized to update this order', 403);
+      }
+      
+      const query = `
+        UPDATE orders 
+        SET payment_status = 'PAID',
+            payment_method = $1,
+            payment_id = $2,
+            updated_at = NOW()
+        WHERE id = $3
+        RETURNING *;
+      `;
+      
+      const result = await pool.query(query, [
+        paymentData.method || 'Manual',
+        paymentData.paymentId || `PAY-${Date.now()}`,
+        orderId
+      ]);
+      
+      return {
+        success: true,
+        data: result.rows[0],
+        message: 'Payment marked as completed'
+      };
+      
+    } catch (error) {
+      if (error.statusCode) throw error;
+      throw new ApiError(error.message || 'Payment update failed', 500);
     }
   }
 }

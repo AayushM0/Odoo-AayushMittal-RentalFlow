@@ -10,13 +10,16 @@ class Order {
       total_amount,
       start_date,
       end_date,
-      status = 'PENDING'
+      status = 'PENDING',
+      billing_address,
+      shipping_address,
+      customer_notes
     } = data;
 
     const query = `
       INSERT INTO orders 
-      (customer_id, vendor_id, order_number, total_amount, start_date, end_date, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      (customer_id, vendor_id, order_number, total_amount, start_date, end_date, status, billing_address, shipping_address, customer_notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *;
     `;
 
@@ -27,7 +30,10 @@ class Order {
       total_amount,
       start_date,
       end_date,
-      status
+      status,
+      billing_address,
+      shipping_address,
+      customer_notes
     ];
 
     const result = await (client || pool).query(query, values);
@@ -53,7 +59,16 @@ class Order {
             'variant_sku', vr.sku,
             'product_name', p.name
           )
-        ) FILTER (WHERE r.id IS NOT NULL), '[]') as reservations
+        ) FILTER (WHERE r.id IS NOT NULL), '[]') as reservations,
+        COALESCE(json_agg(
+          json_build_object(
+            'variant_id', r.variant_id,
+            'quantity', r.quantity,
+            'product_name', p.name,
+            'line_total', 0,
+            'price_per_unit', 0
+          )
+        ) FILTER (WHERE r.id IS NOT NULL), '[]') as items
       FROM orders o
       JOIN users c ON o.customer_id = c.id
       LEFT JOIN users v ON o.vendor_id = v.id

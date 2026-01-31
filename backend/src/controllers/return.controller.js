@@ -1,5 +1,5 @@
 const returnService = require('../services/return.service');
-const { ApiError } = require('../utils/errorHandler');
+const { ApiError } = require('../utils/errors');
 
 exports.recordReturn = async (req, res, next) => {
   try {

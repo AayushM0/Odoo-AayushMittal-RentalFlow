@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { ShoppingCart, Calendar } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
+import { useCart } from '../contexts/CartContext'
 
 function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { addToCart, isInCart } = useCart()
   
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedVariant, setSelectedVariant] = useState(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [addingToCart, setAddingToCart] = useState(false)
 
   useEffect(() => {
     fetchProduct()
@@ -42,6 +48,42 @@ function ProductDetail() {
       setLoading(false)
     }
   }
+
+  const handleAddToCart = async () => {
+    if (!user) {
+      navigate('/login', { state: { from: `/products/${id}` } })
+      return
+    }
+
+    if (user.role !== 'CUSTOMER') {
+      alert('Only customers can add items to cart')
+      return
+    }
+
+    if (!selectedVariant) {
+      alert('Please select a variant')
+      return
+    }
+
+    if (!startDate || !endDate) {
+      alert('Please select rental dates')
+      return
+    }
+
+    try {
+      setAddingToCart(true)
+      addToCart(product, selectedVariant, { startDate, endDate })
+      alert('Added to cart successfully!')
+    } catch (error) {
+      alert(error.message || 'Failed to add to cart')
+    } finally {
+      setAddingToCart(false)
+    }
+  }
+
+  const inCart = selectedVariant && startDate && endDate
+    ? isInCart(selectedVariant.id, startDate, endDate)
+    : false
 
   if (loading) {
     return (
@@ -198,14 +240,60 @@ function ProductDetail() {
             </div>
           )}
 
+          {user?.role === 'CUSTOMER' && (
+            <div className="mb-6">
+              <label className="block text-lg font-semibold mb-3">
+                <Calendar className="w-5 h-5 inline mr-1" />
+                Rental Period
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-600 mb-1 block">Start Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600 mb-1 block">End Date</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate || new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-4">
             {user?.role === 'CUSTOMER' && selectedVariant && (
               <button
-                onClick={() => navigate(`/reserve/${product.id}?variant=${selectedVariant.id}`)}
-                disabled={selectedVariant.stock_quantity === 0}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                onClick={handleAddToCart}
+                disabled={!selectedVariant || !startDate || !endDate || addingToCart || inCart || selectedVariant.stock_quantity === 0}
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {selectedVariant.stock_quantity === 0 ? 'Out of Stock' : 'Reserve Now'}
+                <ShoppingCart className="w-5 h-5" />
+                {selectedVariant.stock_quantity === 0 
+                  ? 'Out of Stock' 
+                  : addingToCart 
+                  ? 'Adding...' 
+                  : inCart 
+                  ? 'Already in Cart' 
+                  : 'Add to Cart'}
+              </button>
+            )}
+            {!user && (
+              <button
+                onClick={() => navigate('/login')}
+                className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Login to Rent
               </button>
             )}
             {user?.role === 'VENDOR' && product.vendor_id === user.id && (

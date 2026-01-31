@@ -14,6 +14,18 @@ const quotationRoutes = require('./src/routes/quotation.routes');
 const pricingRoutes = require('./src/routes/pricing.routes');
 const pickupRoutes = require('./src/routes/pickup.routes');
 const returnRoutes = require('./src/routes/return.routes');
+const invoiceRoutes = require('./src/routes/invoice.routes');
+const paymentRoutes = require('./src/routes/payment.routes');
+const customerRoutes = require('./src/routes/customer.routes');
+const vendorRoutes = require('./src/routes/vendor.routes');
+const adminRoutes = require('./src/routes/admin.routes');
+const adminUserRoutes = require('./src/routes/adminUser.routes');
+const notificationRoutes = require('./src/routes/notification.routes');
+const searchRoutes = require('./src/routes/search.routes');
+const auditRoutes = require('./src/routes/audit.routes');
+const settingsRoutes = require('./src/routes/settings.routes');
+
+require('./src/jobs/emailReminders');
 
 const app = express();
 
@@ -30,6 +42,7 @@ app.use(morgan('dev')); // HTTP request logging
 // Serve static images from 06_SRC/images folder
 const path = require('path');
 app.use('/images', express.static(path.join(__dirname, '../images')));
+app.use('/invoices', express.static(path.join(__dirname, 'invoices')));
 
 // Health check route
 app.get('/health', (req, res) => {
@@ -57,7 +70,15 @@ app.get('/api', (req, res) => {
       quotations: '/api/quotations',
       pricing: '/api/pricing',
       pickups: '/api/pickups',
-      returns: '/api/returns'
+      returns: '/api/returns',
+      invoices: '/api/invoices',
+      payments: '/api/payments',
+      customers: '/api/customers',
+      admin: '/api/admin',
+      notifications: '/api/notifications',
+      search: '/api/search',
+      audit: '/api/audit',
+      settings: '/api/settings'
     }
   });
 });
@@ -72,6 +93,16 @@ app.use('/api/quotations', quotationRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/pickups', pickupRoutes);
 app.use('/api/returns', returnRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin/users', adminUserRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -29,7 +29,20 @@ function Login() {
     setLoading(false)
 
     if (result.success) {
-      navigate(from, { replace: true })
+      const userRole = result.user?.role || localStorage.getItem('userRole')
+      
+      let redirectPath = from
+      if (from === '/dashboard' || from === '/') {
+        if (userRole === 'ADMIN') {
+          redirectPath = '/admin/dashboard'
+        } else if (userRole === 'VENDOR') {
+          redirectPath = '/vendor/dashboard'
+        } else if (userRole === 'CUSTOMER') {
+          redirectPath = '/customer/dashboard'
+        }
+      }
+      
+      navigate(redirectPath, { replace: true })
     } else {
       setError(result.error)
     }

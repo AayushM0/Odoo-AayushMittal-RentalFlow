@@ -16,7 +16,13 @@ function CreateProduct() {
     brand: '',
     is_published: true,
     images: [],
-    variants: []
+    variants: [],
+    // Stock for simple products (non-variant)
+    price_daily: '',
+    price_weekly: '',
+    price_monthly: '',
+    price_hourly: '',
+    stock_quantity: '1'
   })
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -85,7 +91,7 @@ function CreateProduct() {
         images: formData.images
       }
 
-      // Only include variants if there are any
+      // If there are variants, use them
       if (formData.variants.length > 0) {
         productData.variants = formData.variants.map(v => ({
           sku: v.sku,
@@ -96,6 +102,18 @@ function CreateProduct() {
           price_monthly: parseFloat(v.price_monthly) || null,
           stock_quantity: parseInt(v.stock_quantity) || 0
         }))
+      } else {
+        // For products without variants, create a default variant
+        // This is required because stock is managed at the variant level
+        productData.variants = [{
+          sku: `${formData.brand}-${formData.name}-DEFAULT`.toUpperCase().replace(/[^A-Z0-9-]/g, '-'),
+          attributes: {},
+          price_hourly: parseFloat(formData.price_hourly) || null,
+          price_daily: parseFloat(formData.price_daily) || 0,
+          price_weekly: parseFloat(formData.price_weekly) || null,
+          price_monthly: parseFloat(formData.price_monthly) || null,
+          stock_quantity: parseInt(formData.stock_quantity) || 1
+        }]
       }
 
       const createResponse = await api.post('/products', productData)
@@ -259,6 +277,102 @@ function CreateProduct() {
             </p>
           </div>
         </div>
+
+        {/* Pricing & Stock - Only shown when no variants */}
+        {formData.variants.length === 0 && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Pricing & Stock</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Set pricing and stock for this product. At least one price is required.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Daily Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  name="price_daily"
+                  value={formData.price_daily}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Weekly Price (₹)
+                </label>
+                <input
+                  type="number"
+                  name="price_weekly"
+                  value={formData.price_weekly}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 3000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Monthly Price (₹)
+                </label>
+                <input
+                  type="number"
+                  name="price_monthly"
+                  value={formData.price_monthly}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 10000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hourly Price (₹)
+                </label>
+                <input
+                  type="number"
+                  name="price_hourly"
+                  value={formData.price_hourly}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Stock Quantity *
+                </label>
+                <input
+                  type="number"
+                  name="stock_quantity"
+                  value={formData.stock_quantity}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 5"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  How many units are available for rent? (Default: 1)
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Variants */}
         <div className="mb-6">

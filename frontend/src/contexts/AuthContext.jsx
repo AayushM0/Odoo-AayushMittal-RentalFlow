@@ -42,12 +42,13 @@ export const AuthProvider = ({ children }) => {
       
       // Store tokens (refreshToken is in httpOnly cookie)
       localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('userRole', user.role)
       
       // Update state
       setUser(user)
       setIsAuthenticated(true)
       
-      return { success: true }
+      return { success: true, user }
     } catch (error) {
       return { success: false, error: error.response?.data?.error || 'Login failed' }
     }
@@ -80,6 +81,7 @@ export const AuthProvider = ({ children }) => {
       // Continue with logout even if API call fails
     }
     localStorage.removeItem('accessToken')
+    localStorage.removeItem('userRole')
     setUser(null)
     setIsAuthenticated(false)
   }
