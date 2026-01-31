@@ -28,8 +28,11 @@ function App() {
           </Route>
 
           {/* Auth routes with AuthLayout */}
+          {/* Custom Login Layout */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Auth routes with AuthLayout */}
           <Route element={<AuthLayout />}>
-            <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
           </Route>
 
