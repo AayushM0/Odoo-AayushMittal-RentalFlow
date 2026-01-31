@@ -7,8 +7,10 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "db:init": "node scripts/init-db.js",
-    "db:seed": "node scripts/seed.js",
+    "db:migrate": "node scripts/db-migrate.js",
+    "db:seed": "node scripts/db-seed.js",
+    "db:setup": "node scripts/db-setup.js",
+    "db:reset": "node scripts/db-setup.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

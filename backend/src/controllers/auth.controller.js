@@ -1,24 +1,13 @@
-const Joi = require('joi');
 const jwt = require('jsonwebtoken');
 const authService = require('../services/auth.service');
 const { ApiError } = require('../utils/errors');
-const { schemas, validate } = require('../utils/validators');
+const { auth: authSchemas } = require('../database/schemas');
+
+const { registerSchema, loginSchema } = authSchemas;
 
 const register = async (req, res, next) => {
   try {
-    const registerSchema = Joi.object({
-      email: schemas.email,
-      password: schemas.password,
-      role: Joi.string().valid('CUSTOMER', 'VENDOR').required(),
-      name: Joi.string().required(),
-      company: Joi.string().allow(''),
-      category: Joi.string().allow(''),
-      gstin: schemas.gstin.allow(''),
-      phone: schemas.phone,
-      address: Joi.object().optional()
-    });
-
-    const { error, value } = validate(registerSchema, req.body);
+    const { error, value } = registerSchema.validate(req.body);
     if (error) throw new ApiError(error.details[0].message, 400);
 
     const result = await authService.registerUser(value);
@@ -47,12 +36,7 @@ const register = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    const loginSchema = Joi.object({
-      email: schemas.email,
-      password: Joi.string().required()
-    });
-
-    const { error, value } = validate(loginSchema, req.body);
+    const { error, value } = loginSchema.validate(req.body);
     if (error) throw new ApiError(error.details[0].message, 400);
 
     const result = await authService.loginUser(value.email, value.password);
