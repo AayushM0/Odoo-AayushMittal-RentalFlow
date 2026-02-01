@@ -41,7 +41,9 @@ function OrderReview({ billingData, quotation, cartItems, onConfirm, onBack }) {
       const firstOrder = orders[0];
       onConfirm(firstOrder.id);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create order');
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to create order';
+      console.error('Order creation error:', err.response?.data);
+      setError(errorMessage);
     } finally {
       setCreating(false);
     }

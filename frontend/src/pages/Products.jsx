@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
+import ProductKanbanView from '../components/products/ProductKanbanView'
 
 function Products() {
   const { user } = useAuth()
@@ -9,6 +10,7 @@ function Products() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [viewMode, setViewMode] = useState('table') // 'table' or 'kanban'
   const [searchInput, setSearchInput] = useState('') // Local state for input
   const [filters, setFilters] = useState({
     search: '',
@@ -83,11 +85,42 @@ function Products() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-        {user?.role === 'VENDOR' && (
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            Add Product
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* View Toggle Button */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Table View"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'kanban'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Kanban View"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+              </svg>
+            </button>
+          </div>
+          {user?.role === 'VENDOR' && (
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              Add Product
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mb-4 flex gap-4">
@@ -121,100 +154,105 @@ function Products() {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {products.length === 0 ? (
+      {/* Conditional Rendering based on View Mode */}
+      {viewMode === 'kanban' ? (
+        <ProductKanbanView products={products} />
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                  No products found
-                </td>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
-            ) : (
-              products.map((product) => (
-                <tr key={product.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{product.category}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    ₹{product.min_daily_price || 'N/A'}/day
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {product.total_stock !== undefined ? product.total_stock : 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button 
-                      onClick={() => navigate(`/products/${product.id}`)}
-                      className="text-blue-600 hover:underline mr-4"
-                    >
-                      View
-                    </button>
-                    {user?.role === 'VENDOR' && (
-                      <>
-                        <button className="text-blue-600 hover:underline mr-4">Edit</button>
-                        <button className="text-red-600 hover:underline">Delete</button>
-                      </>
-                    )}
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                    No products found
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                products.map((product) => (
+                  <tr key={product.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{product.category}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      ₹{product.min_daily_price || 'N/A'}/day
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {product.total_stock !== undefined ? product.total_stock : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button 
+                        onClick={() => navigate(`/products/${product.id}`)}
+                        className="text-blue-600 hover:underline mr-4"
+                      >
+                        View
+                      </button>
+                      {user?.role === 'VENDOR' && (
+                        <>
+                          <button className="text-blue-600 hover:underline mr-4">Edit</button>
+                          <button className="text-red-600 hover:underline">Delete</button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
 
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-              disabled={pagination.page === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-              disabled={pagination.page >= pagination.pages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing page <span className="font-medium">{pagination.page}</span> of{' '}
-                <span className="font-medium">{pagination.pages}</span> ({pagination.total} products)
-              </p>
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                disabled={pagination.page === 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                disabled={pagination.page >= pagination.pages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              >
+                Next
+              </button>
             </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                <button
-                  onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-                  disabled={pagination.page === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-                  disabled={pagination.page >= pagination.pages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </nav>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing page <span className="font-medium">{pagination.page}</span> of{' '}
+                  <span className="font-medium">{pagination.pages}</span> ({pagination.total} products)
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                  <button
+                    onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                    disabled={pagination.page === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                    disabled={pagination.page >= pagination.pages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </nav>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

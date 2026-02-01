@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Plus, Eye } from 'lucide-react';
+import { FileText, Plus, Eye, CheckCircle, XCircle, Package, Calendar, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
@@ -17,6 +17,7 @@ function Quotations() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('ALL');
+  const [actionLoading, setActionLoading] = useState({});
 
   useEffect(() => {
     fetchQuotations();
@@ -29,11 +30,44 @@ function Quotations() {
     try {
       const params = filter !== 'ALL' ? { status: filter } : {};
       const response = await api.get('/quotations', { params });
-      setQuotations(response.data.data.quotations || []);
+      // Backend returns { success: true, data: quotations[] }
+      const quotationsData = response.data.data || [];
+      setQuotations(quotationsData);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load quotations');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApprove = async (quotationId) => {
+    if (!confirm('Are you sure you want to approve this quotation?')) return;
+
+    setActionLoading(prev => ({ ...prev, [quotationId]: 'approving' }));
+    try {
+      await api.post(`/quotations/${quotationId}/approve`);
+      alert('Quotation approved successfully!');
+      fetchQuotations();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to approve quotation');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [quotationId]: null }));
+    }
+  };
+
+  const handleReject = async (quotationId) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+
+    setActionLoading(prev => ({ ...prev, [quotationId]: 'rejecting' }));
+    try {
+      await api.post(`/quotations/${quotationId}/reject`, { reason });
+      alert('Quotation rejected');
+      fetchQuotations();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to reject quotation');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [quotationId]: null }));
     }
   };
 
@@ -106,69 +140,157 @@ function Quotations() {
           )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {quotations.map(quotation => (
-            <div
-              key={quotation.id}
-              className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">
-                    Quotation #{quotation.id}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Requested on {new Date(quotation.created_at).toLocaleDateString()}
-                  </p>
-                  {user.role === 'VENDOR' && quotation.customer && (
-                    <p className="text-sm text-gray-600">
-                      Customer: {quotation.customer.name}
-                    </p>
+        <div className="space-y-6">
+          {quotations.map(quotation => {
+            const items = JSON.parse(quotation.items || '[]');
+            const isVendor = user.role === 'VENDOR';
+            const isPending = quotation.status === 'PENDING';
+            const isLoadingAction = actionLoading[quotation.id];
+
+            return (
+              <div
+                key={quotation.id}
+                className="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              >
+                {/* Header */}
+                <div className="p-6 border-b bg-gray-50">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-1">
+                        Quotation #{quotation.id}
+                      </h3>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(quotation.created_at).toLocaleDateString()}
+                        </div>
+                        {isVendor && quotation.customer_name && (
+                          <div className="flex items-center gap-1">
+                            <User className="w-4 h-4" />
+                            {quotation.customer_name}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <span
+                      className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                        STATUS_COLORS[quotation.status]
+                      }`}
+                    >
+                      {quotation.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Product Details */}
+                <div className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Package className="w-5 h-5 text-gray-600" />
+                    <h4 className="font-semibold text-gray-900">Products ({items.length})</h4>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {items.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex justify-between items-start p-4 bg-gray-50 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 mb-1">
+                            {item.product_name || `Product (Variant ID: ${item.variant_id})`}
+                          </p>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <p>SKU: {item.sku || 'N/A'}</p>
+                            <p>Quantity: {item.quantity} units</p>
+                            <p className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(item.start_date).toLocaleDateString()} - {new Date(item.end_date).toLocaleDateString()}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Duration: {item.rental_duration} days
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="text-lg font-bold text-blue-600">
+                            ₹{parseFloat(item.line_total || 0).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            ₹{parseFloat(item.price_per_unit || 0).toFixed(2)} per unit
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pricing Summary */}
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-700">Subtotal:</span>
+                        <span className="font-medium">₹{parseFloat(quotation.subtotal || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-700">Tax (GST):</span>
+                        <span className="font-medium">₹{parseFloat(quotation.tax || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t border-blue-300">
+                        <span className="font-bold text-gray-900">Total Amount:</span>
+                        <span className="text-xl font-bold text-blue-600">
+                          ₹{parseFloat(quotation.total_amount).toFixed(2)}
+                        </span>
+                      </div>
+                      {quotation.valid_until && (
+                        <p className="text-xs text-gray-600 pt-2">
+                          Valid until: {new Date(quotation.valid_until).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  {quotation.notes && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                      <p className="text-xs font-semibold text-gray-700 mb-1">Notes:</p>
+                      <p className="text-sm text-gray-600">{quotation.notes}</p>
+                    </div>
                   )}
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    STATUS_COLORS[quotation.status]
-                  }`}
-                >
-                  {quotation.status}
-                </span>
-              </div>
 
-              <div className="grid md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <p className="text-xs text-gray-500">Total Amount</p>
-                  <p className="text-lg font-bold text-blue-600">
-                    ₹{parseFloat(quotation.total_amount).toFixed(2)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Valid Until</p>
-                  <p className="text-sm font-medium">
-                    {quotation.valid_until
-                      ? new Date(quotation.valid_until).toLocaleDateString()
-                      : 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Items</p>
-                  <p className="text-sm font-medium">
-                    {JSON.parse(quotation.items || '[]').length}
-                  </p>
-                </div>
-              </div>
+                {/* Actions */}
+                <div className="p-6 border-t bg-gray-50 flex justify-between items-center gap-3">
+                  <Link
+                    to={`/quotations/${quotation.id}`}
+                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View Full Details
+                  </Link>
 
-              <div className="flex justify-end">
-                <Link
-                  to={`/quotations/${quotation.id}`}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <Eye className="w-4 h-4" />
-                  View Details
-                </Link>
+                  {isVendor && isPending && (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleApprove(quotation.id)}
+                        disabled={isLoadingAction}
+                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                        {isLoadingAction === 'approving' ? 'Approving...' : 'Accept'}
+                      </button>
+                      <button
+                        onClick={() => handleReject(quotation.id)}
+                        disabled={isLoadingAction}
+                        className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
+                      >
+                        <XCircle className="w-5 h-5" />
+                        {isLoadingAction === 'rejecting' ? 'Rejecting...' : 'Decline'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

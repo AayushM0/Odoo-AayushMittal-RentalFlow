@@ -169,20 +169,23 @@ function Cart() {
             )}
             
             <div className="space-y-2">
-              <button
-                onClick={handleGetQuotation}
-                disabled={gettingQuote}
-                className="w-full px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
-              >
-                {gettingQuote ? 'Calculating...' : 'Get Quotation'}
-              </button>
-              <button
-                onClick={handleCheckout}
-                disabled={!quotation || loading}
-                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Proceed to Checkout
-              </button>
+              {!quotation ? (
+                <button
+                  onClick={handleGetQuotation}
+                  disabled={gettingQuote}
+                  className="w-full px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
+                >
+                  {gettingQuote ? 'Calculating...' : 'Get Quotation'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleCheckout}
+                  disabled={loading}
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Proceed to Checkout
+                </button>
+              )}
             </div>
             
             <Link
