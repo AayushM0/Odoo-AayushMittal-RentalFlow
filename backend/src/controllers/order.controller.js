@@ -46,7 +46,7 @@ const createOrder = async (req, res, next) => {
         console.error('Failed to send order confirmation email:', err);
       });
       
-      const notification = notificationService.NotificationTemplates.ORDER_CONFIRMED(result.data.order_number);
+      const notification = notificationService.NotificationTemplates.ORDER_CONFIRMED(result.data.id, result.data.order_number);
       notificationService.createNotification({
         userId: req.user.id,
         ...notification
@@ -69,7 +69,16 @@ const getOrders = async (req, res, next) => {
       status: req.query.status
     };
 
-    const result = await OrderService.getCustomerOrders(req.user.id, filters);
+    let result;
+    
+    // Vendors get their vendor orders, customers get their customer orders
+    if (req.user.role === 'VENDOR') {
+      result = await OrderService.getVendorOrders(req.user.id, filters);
+    } else if (req.user.role === 'ADMIN') {
+      result = await OrderService.getAllOrders(filters);
+    } else {
+      result = await OrderService.getCustomerOrders(req.user.id, filters);
+    }
     
     res.status(200).json(result);
   } catch (err) {

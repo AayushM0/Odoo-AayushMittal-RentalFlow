@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const { ApiError } = require('../utils/errors');
 const Order = require('../models/Order');
 const Reservation = require('../models/Reservation');
+const notificationService = require('./notification.service');
 
 class PickupService {
   
@@ -73,6 +74,22 @@ class PickupService {
       
       const updatedOrder = await Order.findById(orderId);
       
+      // Send notification to customer about pickup
+      try {
+        const notification = {
+          type: 'SUCCESS',
+          title: 'Order Picked Up',
+          message: `Your order #${order.order_number} has been picked up successfully.`,
+          link: `/orders/${orderId}`
+        };
+        await notificationService.createNotification({
+          userId: order.customer_id,
+          ...notification
+        });
+      } catch (notifErr) {
+        console.error('Failed to create pickup notification:', notifErr);
+      }
+      
       return {
         order: updatedOrder,
         pickups: pickupRecords
@@ -89,34 +106,28 @@ class PickupService {
   async getPendingPickups(vendorId) {
     const result = await pool.query(
       `SELECT 
-        o.id,
+        r.id as reservation_id,
+        o.id as order_id,
         o.order_number,
-        o.status,
-        o.total_amount,
-        o.created_at,
-        json_build_object(
-          'id', c.id,
-          'name', c.name,
-          'email', c.email,
-          'phone', c.phone
-        ) as customer,
-        json_agg(
-          json_build_object(
-            'id', r.id,
-            'variant_id', r.variant_id,
-            'start_date', r.start_date,
-            'end_date', r.end_date,
-            'quantity', r.quantity,
-            'status', r.status
-          )
-        ) as reservations
+        o.status as order_status,
+        c.name as customer_name,
+        c.email as customer_email,
+        c.phone as customer_phone,
+        p.name as product_name,
+        v.sku as variant_sku,
+        r.quantity,
+        r.start_date as pickup_date,
+        r.end_date as return_date,
+        r.status as reservation_status
       FROM orders o
       JOIN users c ON o.customer_id = c.id
-      LEFT JOIN reservations r ON r.order_id = o.id
+      JOIN reservations r ON r.order_id = o.id
+      JOIN variants v ON r.variant_id = v.id
+      JOIN products p ON v.product_id = p.id
       WHERE o.vendor_id = $1
         AND o.status = 'CONFIRMED'
-      GROUP BY o.id, c.id
-      ORDER BY o.created_at ASC`,
+        AND r.status = 'ACTIVE'
+      ORDER BY r.start_date ASC`,
       [vendorId]
     );
     

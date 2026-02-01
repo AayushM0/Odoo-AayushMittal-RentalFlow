@@ -44,10 +44,13 @@ function OrderDetail() {
     setLoading(true)
     setError(null)
     try {
+      console.log('Fetching order details for ID:', id);
       const response = await api.get(`/orders/${id}`)
+      console.log('Order response:', response.data);
       setOrder(response.data.data)
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load order')
+      console.error('Error fetching order:', err);
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to load order')
     } finally {
       setLoading(false)
     }
@@ -112,8 +115,20 @@ function OrderDetail() {
     )
   }
 
-  const StatusIcon = STATUS_ICONS[order.status]
-  const orderItems = JSON.parse(order.items || '[]')
+  const StatusIcon = STATUS_ICONS[order.status] || AlertCircle
+  
+  // Safe parsing of order items
+  let orderItems = []
+  try {
+    orderItems = typeof order.items === 'string' 
+      ? JSON.parse(order.items || '[]')
+      : (order.items || [])
+  } catch (e) {
+    console.error('Failed to parse order items:', e)
+    orderItems = []
+  }
+
+  console.log('Rendering OrderDetail, order:', order, 'items:', orderItems)
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -263,7 +278,7 @@ function OrderDetail() {
               </div>
             </div>
 
-            {user.role === 'CUSTOMER' && order.status === 'PENDING' && (
+            {user?.role === 'CUSTOMER' && order.status === 'PENDING' && (
               <div className="bg-white rounded-lg shadow p-6">
                 <h3 className="font-bold mb-4">Actions</h3>
                 <div className="space-y-3">

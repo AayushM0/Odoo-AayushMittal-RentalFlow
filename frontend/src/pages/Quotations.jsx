@@ -29,11 +29,15 @@ function Quotations() {
     
     try {
       const params = filter !== 'ALL' ? { status: filter } : {};
+      console.log('Fetching quotations with params:', params);
       const response = await api.get('/quotations', { params });
+      console.log('Quotations response:', response.data);
       // Backend returns { success: true, data: quotations[] }
       const quotationsData = response.data.data || [];
+      console.log('Quotations data:', quotationsData);
       setQuotations(quotationsData);
     } catch (err) {
+      console.error('Error fetching quotations:', err);
       setError(err.response?.data?.error || 'Failed to load quotations');
     } finally {
       setLoading(false);
@@ -45,7 +49,9 @@ function Quotations() {
 
     setActionLoading(prev => ({ ...prev, [quotationId]: 'approving' }));
     try {
-      await api.post(`/quotations/${quotationId}/approve`);
+      await api.post(`/quotations/${quotationId}/approve`, {
+        modifiedData: null
+      });
       alert('Quotation approved successfully!');
       fetchQuotations();
     } catch (err) {
@@ -80,11 +86,13 @@ function Quotations() {
     );
   }
 
+  console.log('Rendering Quotations page, user:', user, 'quotations count:', quotations.length);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Quotations</h1>
-        {user.role === 'CUSTOMER' && (
+        {user?.role === 'CUSTOMER' && (
           <Link
             to="/quotations/request"
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
@@ -125,12 +133,12 @@ function Quotations() {
           <h2 className="text-2xl font-bold text-gray-600 mb-4">No quotations found</h2>
           <p className="text-gray-500 mb-8">
             {filter === 'ALL'
-              ? user.role === 'CUSTOMER'
+              ? user?.role === 'CUSTOMER'
                 ? 'Request your first quotation to get started'
                 : 'No quotation requests yet'
               : `No quotations with status "${filter}"`}
           </p>
-          {user.role === 'CUSTOMER' && filter === 'ALL' && (
+          {user?.role === 'CUSTOMER' && filter === 'ALL' && (
             <Link
               to="/quotations/request"
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-block"
@@ -142,8 +150,18 @@ function Quotations() {
       ) : (
         <div className="space-y-6">
           {quotations.map(quotation => {
-            const items = JSON.parse(quotation.items || '[]');
-            const isVendor = user.role === 'VENDOR';
+            // Handle items - could be string or already parsed object
+            let items = [];
+            try {
+              items = typeof quotation.items === 'string' 
+                ? JSON.parse(quotation.items || '[]')
+                : (quotation.items || []);
+            } catch (e) {
+              console.error('Failed to parse quotation items:', e);
+              items = [];
+            }
+            
+            const isVendor = user?.role === 'VENDOR';
             const isPending = quotation.status === 'PENDING';
             const isLoadingAction = actionLoading[quotation.id];
 

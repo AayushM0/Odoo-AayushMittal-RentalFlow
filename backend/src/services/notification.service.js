@@ -96,39 +96,39 @@ async function clearAllNotifications(userId) {
 }
 
 const NotificationTemplates = {
-  ORDER_CONFIRMED: (orderNumber) => ({
+  ORDER_CONFIRMED: (orderId, orderNumber) => ({
     type: 'SUCCESS',
     title: 'Order Confirmed',
     message: `Your order #${orderNumber} has been confirmed successfully.`,
-    link: `/orders/${orderNumber}`
+    link: `/orders/${orderId}`
   }),
   
-  PAYMENT_SUCCESS: (amount, orderNumber) => ({
+  PAYMENT_SUCCESS: (amount, orderId, orderNumber) => ({
     type: 'SUCCESS',
     title: 'Payment Successful',
     message: `Payment of ₹${amount} for order #${orderNumber} received.`,
-    link: `/orders/${orderNumber}`
+    link: `/orders/${orderId}`
   }),
   
-  PICKUP_READY: (orderNumber) => ({
+  PICKUP_READY: (orderId, orderNumber) => ({
     type: 'INFO',
     title: 'Ready for Pickup',
     message: `Your order #${orderNumber} is ready for pickup.`,
-    link: `/orders/${orderNumber}`
+    link: `/orders/${orderId}`
   }),
   
-  RETURN_DUE_SOON: (orderNumber, days) => ({
+  RETURN_DUE_SOON: (orderId, orderNumber, days) => ({
     type: 'WARNING',
     title: 'Return Reminder',
     message: `Order #${orderNumber} is due for return in ${days} day(s).`,
-    link: `/orders/${orderNumber}`
+    link: `/orders/${orderId}`
   }),
   
-  RETURN_OVERDUE: (orderNumber) => ({
+  RETURN_OVERDUE: (orderId, orderNumber) => ({
     type: 'ERROR',
     title: 'Return Overdue',
     message: `Order #${orderNumber} is overdue. Please return immediately to avoid late fees.`,
-    link: `/orders/${orderNumber}`
+    link: `/orders/${orderId}`
   }),
   
   QUOTATION_APPROVED: (quotationId) => ({

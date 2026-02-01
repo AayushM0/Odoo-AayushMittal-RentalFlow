@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Download, Eye } from 'lucide-react';
+import { FileText, Download, Eye, FileDown, FileJson } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
@@ -28,10 +28,14 @@ function Invoices() {
 
     try {
       const params = filter !== 'ALL' ? { status: filter } : {};
+      console.log('Fetching invoices with params:', params);
+      console.log('User role:', user?.role, 'User ID:', user?.id);
       const response = await api.get('/invoices', { params });
-      setInvoices(response.data.data.invoices || []);
+      console.log('Invoices response:', response.data);
+      setInvoices(response.data.data?.invoices || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load invoices');
+      console.error('Fetch invoices error:', err);
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to load invoices');
     } finally {
       setLoading(false);
     }
@@ -52,7 +56,52 @@ function Invoices() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert('Failed to download invoice');
+      console.error('Download error:', err);
+      alert(err.response?.data?.error || 'Failed to download invoice');
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const params = filter !== 'ALL' ? { status: filter } : {};
+      const response = await api.get('/invoices/export/csv', {
+        params,
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `invoices-${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('CSV export error:', err);
+      alert('Failed to export CSV');
+    }
+  };
+
+  const handleExportJSON = async () => {
+    try {
+      const params = filter !== 'ALL' ? { status: filter } : {};
+      const response = await api.get('/invoices/export/json', {
+        params,
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `invoices-${Date.now()}.json`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('JSON export error:', err);
+      alert('Failed to export JSON');
     }
   };
 
@@ -67,7 +116,28 @@ function Invoices() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Invoices</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Invoices</h1>
+        
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+            title="Export as CSV"
+          >
+            <FileDown className="w-4 h-4" />
+            Export CSV
+          </button>
+          <button
+            onClick={handleExportJSON}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+            title="Export as JSON"
+          >
+            <FileJson className="w-4 h-4" />
+            Export JSON
+          </button>
+        </div>
+      </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
         {['ALL', 'UNPAID', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'].map(status => (

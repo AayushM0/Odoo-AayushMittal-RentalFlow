@@ -364,7 +364,15 @@ class InvoiceService {
     doc.font('Helvetica');
     let y = tableTop + 25;
     
-    const lineItems = JSON.parse(invoice.line_items || '[]');
+    let lineItems = [];
+    try {
+      lineItems = typeof invoice.line_items === 'string' 
+        ? JSON.parse(invoice.line_items || '[]')
+        : (invoice.line_items || []);
+    } catch (e) {
+      console.error('Error parsing line_items:', e);
+      lineItems = [];
+    }
     
     lineItems.forEach(item => {
       const description = item.duration 

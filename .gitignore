@@ -46,3 +46,5 @@ ecosystem.config.js
 tmp/
 temp/
 *.tmp
+
+MANUAL_TESTING_GUIDE.md

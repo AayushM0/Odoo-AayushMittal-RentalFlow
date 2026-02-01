@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const { ApiError } = require('../utils/errors');
 const Order = require('../models/Order');
 const Reservation = require('../models/Reservation');
+const notificationService = require('./notification.service');
 
 class ReturnService {
   
@@ -152,6 +153,30 @@ class ReturnService {
       await client.query('COMMIT');
       
       const updatedOrder = await Order.findById(orderId);
+      
+      // Send notification to customer about return
+      try {
+        let notificationMessage = `Your order #${order.order_number} has been returned successfully.`;
+        let notificationType = 'SUCCESS';
+        
+        if (lateInfo.isLate) {
+          notificationMessage += ` Late fee of ₹${lateInfo.lateFee} applied for ${lateInfo.daysLate} day(s) late return.`;
+          notificationType = 'WARNING';
+        }
+        
+        const notification = {
+          type: notificationType,
+          title: 'Order Returned',
+          message: notificationMessage,
+          link: `/orders/${orderId}`
+        };
+        await notificationService.createNotification({
+          userId: order.customer_id,
+          ...notification
+        });
+      } catch (notifErr) {
+        console.error('Failed to create return notification:', notifErr);
+      }
       
       return {
         return: returnResult.rows[0],

@@ -162,8 +162,16 @@ exports.generatePDF = async (req, res, next) => {
 exports.downloadPDF = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     
-    const result = await pool.query('SELECT pdf_url, invoice_number FROM invoices WHERE id = $1', [id]);
+    const result = await pool.query(
+      `SELECT i.pdf_url, i.invoice_number, o.customer_id, o.vendor_id 
+       FROM invoices i
+       JOIN orders o ON i.order_id = o.id
+       WHERE i.id = $1`,
+      [id]
+    );
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -173,6 +181,16 @@ exports.downloadPDF = async (req, res, next) => {
     }
     
     const invoice = result.rows[0];
+    
+    // Authorization check - allow ADMIN, CUSTOMER (own), and VENDOR (own)
+    if (userRole !== 'ADMIN' && 
+        invoice.customer_id !== userId && 
+        invoice.vendor_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied'
+      });
+    }
     
     if (!invoice.pdf_url) {
       await invoiceService.generatePDF(parseInt(id));
@@ -222,6 +240,157 @@ exports.recordPayment = async (req, res, next) => {
       success: true,
       message: 'Payment recorded successfully',
       data: result
+    });
+    
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.exportCSV = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { status } = req.query;
+    
+    let query = `
+      SELECT 
+        i.invoice_number,
+        i.status,
+        i.created_at,
+        i.due_date,
+        i.total_amount,
+        i.amount_paid,
+        i.amount_due,
+        o.order_number,
+        c.name as customer_name,
+        c.email as customer_email,
+        v.name as vendor_name
+      FROM invoices i
+      JOIN orders o ON i.order_id = o.id
+      JOIN users c ON o.customer_id = c.id
+      JOIN users v ON o.vendor_id = v.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    let paramCount = 0;
+    
+    if (userRole === 'CUSTOMER') {
+      query += ` AND o.customer_id = $${++paramCount}`;
+      params.push(userId);
+    } else if (userRole === 'VENDOR') {
+      query += ` AND o.vendor_id = $${++paramCount}`;
+      params.push(userId);
+    }
+    
+    if (status) {
+      query += ` AND i.status = $${++paramCount}`;
+      params.push(status);
+    }
+    
+    query += ` ORDER BY i.created_at DESC`;
+    
+    const result = await pool.query(query, params);
+    
+    // Generate CSV
+    const headers = [
+      'Invoice Number',
+      'Order Number',
+      'Customer Name',
+      'Customer Email',
+      'Vendor Name',
+      'Status',
+      'Total Amount',
+      'Amount Paid',
+      'Amount Due',
+      'Created Date',
+      'Due Date'
+    ];
+    
+    let csv = headers.join(',') + '\n';
+    
+    result.rows.forEach(row => {
+      const line = [
+        row.invoice_number,
+        row.order_number,
+        `"${row.customer_name}"`,
+        row.customer_email,
+        `"${row.vendor_name}"`,
+        row.status,
+        row.total_amount,
+        row.amount_paid,
+        row.amount_due,
+        new Date(row.created_at).toLocaleDateString(),
+        row.due_date ? new Date(row.due_date).toLocaleDateString() : 'N/A'
+      ];
+      csv += line.join(',') + '\n';
+    });
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=invoices-${Date.now()}.csv`);
+    res.send(csv);
+    
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.exportJSON = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { status } = req.query;
+    
+    let query = `
+      SELECT 
+        i.*,
+        o.order_number,
+        json_build_object(
+          'id', c.id,
+          'name', c.name,
+          'email', c.email,
+          'company', c.company
+        ) as customer,
+        json_build_object(
+          'id', v.id,
+          'name', v.name,
+          'company', v.company
+        ) as vendor
+      FROM invoices i
+      JOIN orders o ON i.order_id = o.id
+      JOIN users c ON o.customer_id = c.id
+      JOIN users v ON o.vendor_id = v.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    let paramCount = 0;
+    
+    if (userRole === 'CUSTOMER') {
+      query += ` AND o.customer_id = $${++paramCount}`;
+      params.push(userId);
+    } else if (userRole === 'VENDOR') {
+      query += ` AND o.vendor_id = $${++paramCount}`;
+      params.push(userId);
+    }
+    
+    if (status) {
+      query += ` AND i.status = $${++paramCount}`;
+      params.push(status);
+    }
+    
+    query += ` ORDER BY i.created_at DESC`;
+    
+    const result = await pool.query(query, params);
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=invoices-${Date.now()}.json`);
+    res.json({
+      success: true,
+      exportedAt: new Date().toISOString(),
+      totalCount: result.rows.length,
+      data: result.rows
     });
     
   } catch (error) {

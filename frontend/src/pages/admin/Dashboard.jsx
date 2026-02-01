@@ -27,10 +27,13 @@ function AdminDashboard() {
     setLoading(true);
     setError(null);
     try {
+      console.log('Fetching admin dashboard data...');
       const response = await api.get('/admin/dashboard');
+      console.log('Admin dashboard response:', response.data);
       setDashboardData(response.data.data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load dashboard');
+      console.error('Admin dashboard error:', err);
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to load dashboard');
     } finally {
       setLoading(false);
     }
@@ -191,10 +194,13 @@ function AdminDashboard() {
               <DollarSign className="w-8 h-8 mx-auto mb-2 text-blue-600" />
               <p className="font-medium">View Invoices</p>
             </Link>
-            <div className="p-4 border-2 border-gray-200 rounded-lg bg-gray-50 text-center opacity-50 cursor-not-allowed">
-              <Settings className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="font-medium text-gray-600">Settings</p>
-            </div>
+            <Link
+              to="/admin/settings"
+              className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors text-center"
+            >
+              <Settings className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+              <p className="font-medium">Settings</p>
+            </Link>
           </div>
         </div>
 

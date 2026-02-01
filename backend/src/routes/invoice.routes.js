@@ -45,4 +45,16 @@ router.post(
   invoiceController.recordPayment
 );
 
+router.get(
+  '/export/csv',
+  authenticate,
+  invoiceController.exportCSV
+);
+
+router.get(
+  '/export/json',
+  authenticate,
+  invoiceController.exportJSON
+);
+
 module.exports = router;

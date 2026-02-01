@@ -27,11 +27,14 @@ function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
+      console.log('Fetching users with filters:', filters);
       const response = await api.get('/admin/users', { params: filters });
-      setUsers(response.data.data.users);
-      setPagination(response.data.data.pagination);
+      console.log('Users response:', response.data);
+      setUsers(response.data.data?.users || []);
+      setPagination(response.data.data?.pagination || null);
     } catch (error) {
       console.error('Fetch users error:', error);
+      alert(error.response?.data?.error || 'Failed to fetch users');
     } finally {
       setLoading(false);
     }
@@ -39,8 +42,10 @@ function UserManagement() {
 
   const fetchStats = async () => {
     try {
+      console.log('Fetching user stats...');
       const response = await api.get('/admin/users/stats');
-      setStats(response.data.stats);
+      console.log('Stats response:', response.data);
+      setStats(response.data.data || response.data.stats || null);
     } catch (error) {
       console.error('Fetch stats error:', error);
     }

@@ -18,9 +18,15 @@ function Pickups() {
     setLoading(true)
     setError(null)
     try {
+      console.log('Fetching pending pickups...');
       const response = await api.get('/pickups/pending')
-      setPickups(response.data.data || [])
+      console.log('Pickups response:', response.data);
+      // Backend returns { success: true, data: { orders: [...], count: X } }
+      const pickupsData = response.data.data?.orders || response.data.data || [];
+      console.log('Pickups data:', pickupsData);
+      setPickups(pickupsData)
     } catch (err) {
+      console.error('Error fetching pickups:', err);
       setError(err.response?.data?.message || 'Failed to load pending pickups')
     } finally {
       setLoading(false)

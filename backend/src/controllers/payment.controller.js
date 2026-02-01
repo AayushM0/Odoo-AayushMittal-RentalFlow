@@ -44,6 +44,7 @@ exports.verifyPayment = async (req, res, next) => {
       
       const notification = notificationService.NotificationTemplates.PAYMENT_SUCCESS(
         result.payment.amount,
+        result.order.id,
         result.order.order_number
       );
       notificationService.createNotification({

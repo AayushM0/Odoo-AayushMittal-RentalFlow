@@ -147,7 +147,10 @@ class OrderService {
         throw new ApiError('Order not found', 404);
       }
 
-      if (userRole !== 'ADMIN' && order.customer_id !== userId) {
+      // Allow ADMIN, CUSTOMER (own orders), and VENDOR (own orders)
+      if (userRole !== 'ADMIN' && 
+          order.customer_id !== userId && 
+          order.vendor_id !== userId) {
         throw new ApiError('Not authorized to view this order', 403);
       }
 
@@ -171,6 +174,114 @@ class OrderService {
       };
     } catch (error) {
       throw new ApiError(error.message || 'Failed to fetch orders', 500);
+    }
+  }
+
+  static async getVendorOrders(vendorId, filters = {}) {
+    try {
+      const { page = 1, limit = 10, status } = filters;
+      const offset = (page - 1) * limit;
+
+      let query = `
+        SELECT o.*, 
+          u.name as customer_name, 
+          u.email as customer_email,
+          json_agg(
+            json_build_object(
+              'variant_id', r.variant_id,
+              'quantity', r.quantity,
+              'start_date', r.start_date,
+              'end_date', r.end_date,
+              'product_name', p.name,
+              'variant_sku', v.sku,
+              'price_per_unit', v.price_daily,
+              'line_total', (v.price_daily * r.quantity * EXTRACT(days FROM (r.end_date - r.start_date)))
+            )
+          ) as items
+        FROM orders o
+        JOIN users u ON o.customer_id = u.id
+        LEFT JOIN reservations r ON r.order_id = o.id
+        LEFT JOIN variants v ON r.variant_id = v.id
+        LEFT JOIN products p ON v.product_id = p.id
+        WHERE o.vendor_id = $1
+      `;
+
+      const params = [vendorId];
+
+      if (status) {
+        query += ` AND o.status = $${params.length + 1}`;
+        params.push(status);
+      }
+
+      query += ` GROUP BY o.id, u.name, u.email
+        ORDER BY o.created_at DESC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+
+      params.push(limit, offset);
+
+      const result = await pool.query(query, params);
+
+      return {
+        success: true,
+        data: result.rows
+      };
+    } catch (error) {
+      throw new ApiError(error.message || 'Failed to fetch vendor orders', 500);
+    }
+  }
+
+  static async getAllOrders(filters = {}) {
+    try {
+      const { page = 1, limit = 10, status } = filters;
+      const offset = (page - 1) * limit;
+
+      let query = `
+        SELECT o.*, 
+          u.name as customer_name, 
+          u.email as customer_email,
+          v_user.name as vendor_name,
+          json_agg(
+            json_build_object(
+              'variant_id', r.variant_id,
+              'quantity', r.quantity,
+              'start_date', r.start_date,
+              'end_date', r.end_date,
+              'product_name', p.name,
+              'variant_sku', vr.sku,
+              'price_per_unit', vr.price_daily,
+              'line_total', (vr.price_daily * r.quantity * EXTRACT(days FROM (r.end_date - r.start_date)))
+            )
+          ) as items
+        FROM orders o
+        JOIN users u ON o.customer_id = u.id
+        JOIN users v_user ON o.vendor_id = v_user.id
+        LEFT JOIN reservations r ON r.order_id = o.id
+        LEFT JOIN variants vr ON r.variant_id = vr.id
+        LEFT JOIN products p ON vr.product_id = p.id
+        WHERE 1=1
+      `;
+
+      const params = [];
+
+      if (status) {
+        query += ` AND o.status = $${params.length + 1}`;
+        params.push(status);
+      }
+
+      query += ` GROUP BY o.id, u.name, u.email, v_user.name
+        ORDER BY o.created_at DESC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+
+      params.push(limit, offset);
+
+      const result = await pool.query(query, params);
+
+      return {
+        success: true,
+        data: result.rows
+      };
+    } catch (error) {
+      throw new ApiError(error.message || 'Failed to fetch all orders', 500);
     }
   }
 
@@ -246,6 +357,23 @@ class OrderService {
       const invoice = await invoiceService.generateInvoice(orderId, client);
       
       await client.query('COMMIT');
+      
+      // Send notification to vendor about pending pickup
+      const notificationService = require('./notification.service');
+      try {
+        const vendorNotification = {
+          type: 'INFO',
+          title: 'New Pickup Required',
+          message: `Order #${order.order_number} is confirmed and ready for pickup.`,
+          link: `/vendor/pickups`
+        };
+        await notificationService.createNotification({
+          userId: order.vendor_id,
+          ...vendorNotification
+        });
+      } catch (notifErr) {
+        console.error('Failed to create vendor pickup notification:', notifErr);
+      }
       
       setTimeout(async () => {
         try {
