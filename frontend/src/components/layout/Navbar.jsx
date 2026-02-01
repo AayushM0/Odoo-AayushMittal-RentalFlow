@@ -7,7 +7,7 @@ import NotificationBell from '../notifications/NotificationBell'
 
 function Navbar() {
   const { user, logout } = useAuth()
-  const { itemCount } = useCart()
+  const { itemCount, cartItems } = useCart()
 
   return (
     <nav className="bg-white shadow-md">
@@ -43,7 +43,7 @@ function Navbar() {
                     <Link 
                       to="/cart" 
                       className={cn("relative flex items-center gap-2 text-gray-700 hover:text-blue-600 transition")}
-                      aria-label={`Cart with ${itemCount} items`}
+                      aria-label={`Cart with ${cartItems} items`}
                     >
                       <ShoppingCart className="w-5 h-5" />
                       Cart
@@ -73,9 +73,9 @@ function Navbar() {
                     <Link to="/vendor/pickups" className={cn("flex items-center gap-2 text-gray-700 hover:text-blue-600 transition")}>
                       Pickups
                     </Link>
-                    <Link to="/vendor/returns" className={cn("flex items-center gap-2 text-gray-700 hover:text-blue-600 transition")}>
+                    {/* <Link to="/vendor/returns" className={cn("flex items-center gap-2 text-gray-700 hover:text-blue-600 transition")}>
                       Returns
-                    </Link>
+                    </Link> */}
                     <Link to="/orders" className={cn("flex items-center gap-2 text-gray-700 hover:text-blue-600 transition")}>
                       Orders
                     </Link>

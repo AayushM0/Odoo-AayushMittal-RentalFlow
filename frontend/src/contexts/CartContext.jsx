@@ -33,6 +33,7 @@ export function CartProvider({ children }) {
       if (savedCart) {
         try {
           setCartItems(JSON.parse(savedCart));
+          console.log(cartItems)
         } catch (error) {
           console.error('Failed to parse cart from localStorage:', error);
           localStorage.removeItem(newCartKey);
