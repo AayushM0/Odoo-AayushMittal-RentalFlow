@@ -6,10 +6,10 @@ const router = express.Router();
 
 router.use(authenticate);
 
-// Customer creates quotation
+// Customer or Vendor creates quotation
 router.post(
   '/',
-  authorize('CUSTOMER'),
+  authorize('CUSTOMER', 'VENDOR'),
   quotationController.createQuotation
 );
 

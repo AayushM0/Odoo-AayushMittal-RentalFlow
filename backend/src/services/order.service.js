@@ -109,7 +109,10 @@ class OrderService {
       );
 
       if (!reservationResult.success) {
-        throw new ApiError(reservationResult.error, 400);
+        throw new ApiError(
+          reservationResult.error || 'Unable to reserve items. Please check availability and try again.',
+          400
+        );
       }
 
       await client.query('COMMIT');
@@ -123,6 +126,8 @@ class OrderService {
 
     } catch (error) {
       await client.query('ROLLBACK');
+      
+      console.error('Order creation error:', error);
       
       if (error.statusCode) {
         throw error;

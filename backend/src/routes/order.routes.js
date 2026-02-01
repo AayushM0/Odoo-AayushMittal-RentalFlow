@@ -7,7 +7,7 @@ router.use(authenticate);
 
 router.post(
   '/',
-  authorize('CUSTOMER'),
+  authorize('CUSTOMER', 'VENDOR'),
   orderController.createOrder
 );
 
@@ -17,7 +17,7 @@ router.get('/:id', orderController.getOrderById);
 
 router.post('/:id/confirm', orderController.confirmOrder);
 
-router.post('/:id/mark-payment-complete', authorize('CUSTOMER'), orderController.markPaymentComplete);
+router.post('/:id/mark-payment-complete', authorize('CUSTOMER', 'VENDOR'), orderController.markPaymentComplete);
 
 router.delete('/:id', orderController.cancelOrder);
 

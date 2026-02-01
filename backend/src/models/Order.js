@@ -19,7 +19,7 @@ class Order {
     const query = `
       INSERT INTO orders 
       (customer_id, vendor_id, order_number, total_amount, start_date, end_date, status, billing_address, shipping_address, customer_notes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10)
       RETURNING *;
     `;
 
@@ -31,8 +31,8 @@ class Order {
       start_date,
       end_date,
       status,
-      billing_address,
-      shipping_address,
+      billing_address ? JSON.stringify(billing_address) : null,
+      shipping_address ? JSON.stringify(shipping_address) : null,
       customer_notes
     ];
 

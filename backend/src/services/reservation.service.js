@@ -59,9 +59,11 @@ const createReservationWithClient = async (client, orderId, items) => {
       );
       
       if (!availCheck.success || !availCheck.data.canReserve) {
+        const available = availCheck.data?.available || 0;
         throw new Error(
-          `Insufficient availability for variant ${variantId}. ` +
-          `Available: ${availCheck.data?.available || 0}, Requested: ${quantity}`
+          `Insufficient stock for the selected dates. ` +
+          `Available: ${available}, Requested: ${quantity}. ` +
+          `Please choose different dates or reduce quantity.`
         );
       }
       
